@@ -1,10 +1,13 @@
 from pyrl import readline
-import sys
+import sys, subprocess
+import time
 
+# this is just a workaround of rlwrap
+# terminal sucks, we will not working on this framework
+p = subprocess.Popen(sys.argv[1], stdin = subprocess.PIPE)
 while True:
-	print("[32mhi> [0m", end = "")
-	cmd = readline(4)
-	print()
-	print("get command", cmd)
-	if cmd == "exit" or not cmd:
-		sys.exit(0)
+	cmd = readline(0)
+	print("get cmd:", cmd, file = sys.stderr)
+	p.stdin.write(cmd.encode() + b"\n")
+	p.stdin.flush()
+	time.sleep(1)
