@@ -8,7 +8,6 @@ def readline(offset):
 	result = ""
 	state = 0
 	cur = 0
-
 	restore = termios.tcgetattr(fd)
 	try: 
 		tty.setraw(sys.stdin.fileno())
@@ -34,13 +33,15 @@ def readline(offset):
 						pr("[D")
 				state = 0
 				continue
+			if d == "\x03":
+				raise KeyboardInterrupt
 			if d == "\x04":
-				return ""
+				raise EOFError
 			if d == "\r":
 				break
 			if d == "\x7f":
 				if result:
-					result = result[:-1]
+					result = result[0:cur - 1] + result[cur:]
 					cur -= 1
 					pr("[D [D")
 				continue
@@ -57,8 +58,7 @@ def readline(offset):
 			moveback = len(result) - cur
 			if moveback > 0:
 				pr(f"[{moveback}D")
-	except KeyboardInterrupt:
-		print ("[Error] Abnormal program termination")
 	finally:
 		termios.tcsetattr(fd, termios.TCSADRAIN, restore)
+	print()
 	return result
