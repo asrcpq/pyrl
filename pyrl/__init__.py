@@ -1,11 +1,12 @@
 import sys, termios, tty
+from time import time
 
 def pr(s):
 	print(s, end = "")
 
 s = 0
 cur = 0
-history = []
+history = ""
 result = ""
 
 def move(o):
@@ -22,6 +23,7 @@ def clear():
 	global cur, result
 	move(-cur)
 	result = ""
+	pr("[0K")
 
 def print_cursor_right():
 	global cur, result
@@ -30,6 +32,14 @@ def print_cursor_right():
 	moveback = len(result) - cur
 	if moveback > 0:
 		pr(f"[{moveback}D")
+
+import string
+word_chars = set(
+	string.ascii_lowercase +
+	string.ascii_uppercase +
+	string.digits +
+	"_"
+)
 
 def proc(d):
 	global s, cur, result
@@ -49,12 +59,13 @@ def proc(d):
 		s = 0
 		return
 	if d == "\x03":
-		raise KeyboardInterrupt
+		clear()
+		return
 	if d == "\x04":
 		raise EOFError
 	if d == "\x10":
 		clear()
-		result = history[-1]
+		result = history[1]
 		pr(result)
 		cur = len(result)
 		return
@@ -64,6 +75,8 @@ def proc(d):
 	if d[0] == "":
 		s = 1
 		return
+
+	# following will trigger print right refresh
 	if d == "\x7f":
 		if cur > 0:
 			result = result[0:cur - 1] + result[cur:]
@@ -71,6 +84,21 @@ def proc(d):
 			pr("[D")
 		else:
 			return
+	elif d == "\x17":
+		pcur = cur
+		first = True
+		while True:
+			if cur == 0:
+				break
+			if not first and result[cur - 1] not in word_chars:
+				break
+			if first and result[cur - 1] in word_chars:
+				first = False
+			cur -= 1
+		if pcur == cur:
+			return
+		result = result[0:cur] + result[pcur:]
+		pr(f"[{pcur - cur}D")
 	else:
 		result = result[0:cur] + d + result[cur:]
 		pr(d)
@@ -97,5 +125,5 @@ def readline(offset):
 	finally:
 		termios.tcsetattr(fd, termios.TCSADRAIN, restore)
 	print()
-	history.append(result)
+	history = result
 	return result
